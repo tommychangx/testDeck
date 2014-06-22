@@ -1,0 +1,90 @@
+Practical Machine Learning - Prediction Assignment Writeup
+
+========================================================
+
+The goal of your project is to predict the manner in which users did the exercise.
+This is the "classe" variable in the training set. 
+
+
+Getting Data
+
+The training data for this project are available here: 
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here: 
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+```{r}
+training <- read.csv("C:/Users/Tommy Chan/c8a1/pml-training.csv",  na.strings = c("NA", ""))
+testing <- read.csv("C:/Users/Tommy Chan/c8a1/pml-testing.csv",  na.strings = c("NA", ""))
+
+```
+
+
+Discarding columns with not enough data
+
+```{r fig.width=7, fig.height=6}
+var <- names(training)[apply(training,2,function(x) table(is.na(x))[1]==19622)]   
+training02<- training[,var]
+testing02 <- testing[,c(var[-length(var)],names(testing)[length(testing)])] 
+
+unneedolIndex <- grep("new_window|num_window|X|timestamp|user_name",colnames(training02))
+training03 <- training02[,-c(unneedolIndex)]
+testing03  <- testing02[,-c(unneedolIndex)]
+
+```
+
+
+Training a model 
+
+randomForest is used as it is one of the best classification 
+
+```{r}
+library(caret)
+yy = createDataPartition(training03$classe, p = 0.7, list = FALSE)
+trainPart = training03[ yy,]
+testPart = training03[-yy,]
+
+library(randomForest)
+resultModel <- randomForest(classe ~ .,data = trainPart)
+```
+
+
+cross validation,  out of sample error
+
+```{r}
+aTestingLabelsPred <- predict(resultModel, newdata = testPart)
+aConfusionMatrix <- confusionMatrix(aTestingLabelsPred, testPart$classe)
+aConfusionMatrix
+```
+
+
+Out-of-sample error
+
+```{r}
+(1 - aConfusionMatrix$overall["Accuracy"])[[1]]
+```
+
+
+With the prediction model, we use it to predict 20 different test cases : 
+
+```{r}
+answers <- predict(resultModel,testing03) 
+
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+pml_write_files(answers)
+
+```
+
+
+The Result 
+
+```{r}
+answers
+```
